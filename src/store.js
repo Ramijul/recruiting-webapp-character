@@ -102,8 +102,10 @@ const ATTRIBUTE_TOTAL_CAP = 70;
 
 /**
  * interface character {
- *  attributes: { [attributeName] : {points: number; modifier: number} },
- *  skills: { [skillName]: {points: number; total: number} }
+ *  attributes: { [attributeName] : {points: number; modifier: number} };
+ *  skills: { [skillName]: {points: number; total: number} };
+ *  usedSkillPoints: number;
+ *  availableSkillPoints: number;
  * }
  *
  * TODO: move create to context so that state can be initialized when
