@@ -1,48 +1,19 @@
 import { create } from "zustand";
-import { ATTRIBUTE_LIST, SKILL_LIST } from "./consts";
+import { SKILL_LIST } from "./consts";
 import { produce } from "immer";
+import {
+  fetchCharacters,
+  getDefaultCharacter,
+  saveCharacters,
+} from "./CharacterService";
 
-/**
- * default attributes
- * @returns
- */
-function INIT_ATTRIBUTES() {
-  const attributes = {};
-  for (let attr of ATTRIBUTE_LIST) {
-    attributes[attr] = {
-      points: 10,
-      modifier: 0, // 0 for 10
-    };
+function saveUpdatedCharacters(get) {
+  const characters = get().characters;
+  if (!characters.length) {
+    return;
   }
-  return attributes;
-}
 
-/**
- * default skills
- * @returns
- */
-function INIT_SKILLS() {
-  const skills = {};
-  for (let skill of SKILL_LIST) {
-    skills[skill.name] = {
-      points: 0,
-      total: 0,
-    };
-  }
-  return skills;
-}
-
-/**
- * default character
- * @returns
- */
-function getDefaultCharacter() {
-  return {
-    attributes: INIT_ATTRIBUTES(),
-    skills: INIT_SKILLS(),
-    usedSkillPoints: 0,
-    availableSkillPoints: calcAvailableSkillPoints(0),
-  };
+  saveCharacters(characters);
 }
 
 /**
@@ -108,20 +79,28 @@ const ATTRIBUTE_TOTAL_CAP = 70;
  *  availableSkillPoints: number;
  * }
  *
- * TODO: move create to context so that state can be initialized when
- * app loads and data is fetched from rest api
  */
-export const useStore = create((set) => ({
-  characters: [getDefaultCharacter()],
+export const useStore = create((set, get) => ({
+  characters: [],
 
-  addNewCharacter: () =>
+  initializeState: async () => {
+    const characters = await fetchCharacters();
+    console.log("setting in store", characters);
+    set(() => ({
+      characters,
+    }));
+  },
+
+  addNewCharacter: () => {
     set(
       produce((state) => {
         state.characters.push(getDefaultCharacter());
       })
-    ),
+    );
+    saveUpdatedCharacters(get);
+  },
 
-  incrementAttribute: (characterInd, attributeName) =>
+  incrementAttribute: (characterInd, attributeName) => {
     set(
       produce((state) => {
         const character = state.characters[characterInd];
@@ -150,9 +129,11 @@ export const useStore = create((set) => ({
         //update skill total of all skills that has the current attribute as its modifier
         updateSkillTotal(character, modifier, attributeName);
       })
-    ),
+    );
+    saveUpdatedCharacters(get);
+  },
 
-  decrementAttribute: (characterInd, attributeName) =>
+  decrementAttribute: (characterInd, attributeName) => {
     set(
       produce((state) => {
         const character = state.characters[characterInd];
@@ -191,9 +172,11 @@ export const useStore = create((set) => ({
         //update skill total of all skills that has the current attribute as its attributeModifier
         updateSkillTotal(character, modifier, attributeName);
       })
-    ),
+    );
+    saveUpdatedCharacters(get);
+  },
 
-  incrementSkills: (characterInd, skillName, attributeModifier) =>
+  incrementSkills: (characterInd, skillName, attributeModifier) => {
     set(
       produce((state) => {
         const character = state.characters[characterInd];
@@ -214,9 +197,11 @@ export const useStore = create((set) => ({
         // update used skill points
         character.usedSkillPoints++;
       })
-    ),
+    );
+    saveUpdatedCharacters(get);
+  },
 
-  decrementSkills: (characterInd, skillName, attributeModifier) =>
+  decrementSkills: (characterInd, skillName, attributeModifier) => {
     set(
       produce((state) => {
         const character = state.characters[characterInd];
@@ -238,7 +223,9 @@ export const useStore = create((set) => ({
         // update used skill points
         character.usedSkillPoints--;
       })
-    ),
+    );
+    saveUpdatedCharacters(get);
+  },
 }));
 
 // takes a function and an array of params to pass to it

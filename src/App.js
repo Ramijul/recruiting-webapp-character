@@ -1,9 +1,18 @@
 import { errorHandlerWrap, useStore } from "./store.js";
 import "./App.css";
 import { Character } from "./components/Character.js";
+import { useEffect } from "react";
 
 function App() {
   const state = useStore((state) => state);
+
+  // will execute twice in dev mode
+  useEffect(() => {
+    (async () => {
+      await state.initializeState();
+    })();
+    // eslint-disable-next-line
+  }, []);
 
   return (
     <div className="App">
