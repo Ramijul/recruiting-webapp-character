@@ -1,6 +1,7 @@
 import { CLASS_LIST } from "../consts";
 import { Attributes } from "./Attributes";
 import { ClassDisplay } from "./ClassDisplay";
+import { Skills } from "./Skills";
 
 export function Character({ data, characterIndex }) {
   return (
@@ -20,6 +21,10 @@ export function Character({ data, characterIndex }) {
                 attributes={data.attributes}
               />
             ))}
+          </td>
+          <td>
+            <h3>Skills</h3>
+            <Skills characterIndex={characterIndex} />
           </td>
         </tr>
       </tbody>

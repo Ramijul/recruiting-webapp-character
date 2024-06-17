@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ATTRIBUTE_LIST } from "./consts";
+import { ATTRIBUTE_LIST, SKILL_LIST } from "./consts";
 import { produce } from "immer";
 
 /**
@@ -15,6 +15,21 @@ function INIT_ATTRIBUTES() {
     };
   }
   return attributes;
+}
+
+/**
+ * default skills
+ * @returns
+ */
+function INIT_SKILLS() {
+  const skills = {};
+  for (let skill of SKILL_LIST) {
+    skills[skill.name] = {
+      points: 0,
+      total: 0,
+    };
+  }
+  return skills;
 }
 
 /**
@@ -41,7 +56,37 @@ function calcAttributeTotal(attributes) {
   return sum;
 }
 
+/**
+ * Calcualte spendable points on skills based on Intelligence Modifier
+ * @param {*} intelligenceModifier
+ * @returns
+ */
+function calcAvailableSkillPoints(intelligenceModifier) {
+  return intelligenceModifier < -2 ? 0 : 10 + intelligenceModifier * 4;
+}
+
+/**
+ * Update skill total for all skills whose attributeModifier has been updated
+ * @param {*} character
+ * @param {*} modifier
+ * @param {*} attributeModifier
+ */
+function updateSkillTotal(character, modifier, attributeModifier) {
+  const skillsToUpdate = SKILL_LIST.filter(
+    (s) => s.attributeModifier === attributeModifier
+  ).map((s) => s.name);
+
+  for (let s of skillsToUpdate) {
+    character["skills"][s]["total"] =
+      character["skills"][s]["points"] + modifier;
+  }
+}
+
+/**
+ * Attribute total cap
+ */
 const ATTRIBUTE_TOTAL_CAP = 70;
+
 /**
  * interface character {
  *  attributes: { [attributeName] : {points: number; modifier: number} },
@@ -52,8 +97,12 @@ export const useStore = create((set) => ({
   characters: [
     {
       attributes: INIT_ATTRIBUTES(),
+      skills: INIT_SKILLS(),
     },
   ],
+  usedSkillPoints: 0,
+  availableSkillPoints: calcAvailableSkillPoints(0),
+
   incrementAttribute: (characterInd, attributeName) =>
     set(
       produce((state) => {
@@ -69,10 +118,19 @@ export const useStore = create((set) => ({
         // calculate modifier
         const modifier = calcModifier(points);
 
+        //update attribute
         attributes[attributeName] = {
           points,
           modifier,
         };
+
+        // update skill points to spend
+        if (attributeName === "Intelligence") {
+          state.availableSkillPoints = calcAvailableSkillPoints(modifier);
+        }
+
+        //update skill total of all skills that has the current attribute as its modifier
+        updateSkillTotal(character, modifier, attributeName);
       })
     ),
 
@@ -91,10 +149,75 @@ export const useStore = create((set) => ({
         // calculate modifier
         const modifier = calcModifier(points);
 
+        //update skill points to spend
+        if (attributeName === "Intelligence") {
+          const availablePoints = calcAvailableSkillPoints(modifier);
+
+          // decreasing intelligence will result in a lower availableSkillPoints
+          // availableSkillPoints can't be lower than the already used up points
+          if (availablePoints < state.usedSkillPoints) {
+            throw new Error(
+              "You must undo some of the distributed skill points before you decreasing Intelligence."
+            );
+          }
+
+          // its ok to update the availableSkillPoints otherwise
+          state.availableSkillPoints = availablePoints;
+        }
+
         attributes[attributeName] = {
           points,
           modifier,
         };
+
+        //update skill total of all skills that has the current attribute as its attributeModifier
+        updateSkillTotal(character, modifier, attributeName);
+      })
+    ),
+
+  incrementSkills: (characterInd, skillName, attributeModifier) =>
+    set(
+      produce((state) => {
+        // do not allow distributing more points than allocated
+        if (state.usedSkillPoints + 1 > state.availableSkillPoints) {
+          throw new Error("No more points available to spend");
+        }
+
+        const character = state.characters[characterInd];
+        const skills = character["skills"];
+
+        const points = skills[skillName]["points"] + 1;
+        const total =
+          character["attributes"][attributeModifier]["modifier"] + points;
+
+        skills[skillName] = { points, total };
+
+        // update used skill points
+        state.usedSkillPoints++;
+      })
+    ),
+
+  decrementSkills: (characterInd, skillName, attributeModifier) =>
+    set(
+      produce((state) => {
+        const character = state.characters[characterInd];
+        const skills = character["skills"];
+
+        const points = skills[skillName]["points"] - 1;
+
+        // neither skills points nor usedSkillPoints can go below 0
+        // checking points will suffice
+        if (points < 0) {
+          throw new Error("Skill points can't be below 0");
+        }
+
+        const total =
+          character["attributes"][attributeModifier]["modifier"] + points;
+
+        skills[skillName] = { points, total };
+
+        // update used skill points
+        state.usedSkillPoints--;
       })
     ),
 }));
