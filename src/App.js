@@ -11,8 +11,12 @@ function App() {
         <h1>React Coding Exercise</h1>
       </header>
       <section className="App-section">
-        {state.characters.map((_, index) => (
-          <Character key={"character-" + index} characterIndex={index} />
+        {state.characters.map((val, index) => (
+          <Character
+            key={"character-" + index}
+            data={val}
+            characterIndex={index}
+          />
         ))}
       </section>
     </div>
