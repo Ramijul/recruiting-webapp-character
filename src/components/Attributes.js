@@ -13,8 +13,14 @@ export function Attributes({ characterIndex }) {
             state.characters[characterIndex]["attributes"][attributeName][
               "points"
             ]
+          }{" "}
+          (modifier:{" "}
+          {
+            state.characters[characterIndex]["attributes"][attributeName][
+              "modifier"
+            ]
           }
-          &nbsp;
+          ) &nbsp;
           <button
             onClick={() =>
               state.incrementAttribute(characterIndex, attributeName)
