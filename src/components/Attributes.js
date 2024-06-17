@@ -1,4 +1,5 @@
 import { ATTRIBUTE_LIST } from "../consts";
+import { errorHandlerWrap } from "../store";
 import { useStore } from "../store";
 
 export function Attributes({ characterIndex }) {
@@ -23,14 +24,20 @@ export function Attributes({ characterIndex }) {
           ) &nbsp;
           <button
             onClick={() =>
-              state.incrementAttribute(characterIndex, attributeName)
+              errorHandlerWrap(state.incrementAttribute, [
+                characterIndex,
+                attributeName,
+              ])
             }
           >
             +
           </button>
           <button
             onClick={() =>
-              state.decrementAttribute(characterIndex, attributeName)
+              errorHandlerWrap(state.decrementAttribute, [
+                characterIndex,
+                attributeName,
+              ])
             }
           >
             -

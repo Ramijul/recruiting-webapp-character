@@ -28,6 +28,21 @@ function calcModifier(points) {
 }
 
 /**
+ * Calculate the total attribute points
+ * @param {*} attributes
+ * @returns
+ */
+function calcAttributeTotal(attributes) {
+  let sum = 0;
+
+  for (let key in attributes) {
+    sum += attributes[key].points;
+  }
+  return sum;
+}
+
+const ATTRIBUTE_TOTAL_CAP = 70;
+/**
  * interface character {
  *  attributes: { [attributeName] : {points: number; modifier: number} },
  *  skills: { [skillName]: {points: number; total: number} }
@@ -43,12 +58,18 @@ export const useStore = create((set) => ({
     set(
       produce((state) => {
         const character = state.characters[characterInd];
-        const points = character["attributes"][attributeName]["points"] + 1;
+        const attributes = character["attributes"];
+        // cap total attribute value
+        if (calcAttributeTotal(attributes) + 1 > ATTRIBUTE_TOTAL_CAP) {
+          throw new Error("Can't exceed a total of 70");
+        }
+
+        const points = attributes[attributeName]["points"] + 1;
 
         // calculate modifier
         const modifier = calcModifier(points);
 
-        character["attributes"][attributeName] = {
+        attributes[attributeName] = {
           points,
           modifier,
         };
@@ -59,15 +80,30 @@ export const useStore = create((set) => ({
     set(
       produce((state) => {
         const character = state.characters[characterInd];
-        const points = character["attributes"][attributeName]["points"] - 1;
+        const attributes = character["attributes"];
+        const points = attributes[attributeName]["points"] - 1;
+
+        // disallow negative value so that user can't bypass the total attribute value cap
+        if (points < 0) {
+          throw new Error("Attribute value must be greater than or equal to 0");
+        }
 
         // calculate modifier
         const modifier = calcModifier(points);
 
-        character["attributes"][attributeName] = {
+        attributes[attributeName] = {
           points,
           modifier,
         };
       })
     ),
 }));
+
+// takes a function and an array of params to pass to it
+export const errorHandlerWrap = (func, params) => {
+  try {
+    func(...params);
+  } catch (e) {
+    alert(e.message);
+  }
+};
