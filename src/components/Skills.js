@@ -8,10 +8,10 @@ export function Skills({ characterIndex }) {
     <>
       <div>
         Available points to spend:{" "}
-        {state.availableSkillPoints -
-          state.usedSkillPoints +
+        {state.characters[characterIndex].availableSkillPoints -
+          state.characters[characterIndex].usedSkillPoints +
           " of " +
-          state.availableSkillPoints}
+          state.characters[characterIndex].availableSkillPoints}
       </div>
       <hr />
       {SKILL_LIST.map((skill) => (

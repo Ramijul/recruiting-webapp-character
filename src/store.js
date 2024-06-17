@@ -33,6 +33,19 @@ function INIT_SKILLS() {
 }
 
 /**
+ * default character
+ * @returns
+ */
+function getDefaultCharacter() {
+  return {
+    attributes: INIT_ATTRIBUTES(),
+    skills: INIT_SKILLS(),
+    usedSkillPoints: 0,
+    availableSkillPoints: calcAvailableSkillPoints(0),
+  };
+}
+
+/**
  * calculate attribute modifier based on points
  * @param {*} points
  * @returns
@@ -92,16 +105,19 @@ const ATTRIBUTE_TOTAL_CAP = 70;
  *  attributes: { [attributeName] : {points: number; modifier: number} },
  *  skills: { [skillName]: {points: number; total: number} }
  * }
+ *
+ * TODO: move create to context so that state can be initialized when
+ * app loads and data is fetched from rest api
  */
 export const useStore = create((set) => ({
-  characters: [
-    {
-      attributes: INIT_ATTRIBUTES(),
-      skills: INIT_SKILLS(),
-    },
-  ],
-  usedSkillPoints: 0,
-  availableSkillPoints: calcAvailableSkillPoints(0),
+  characters: [getDefaultCharacter()],
+
+  addNewCharacter: () =>
+    set(
+      produce((state) => {
+        state.characters.push(getDefaultCharacter());
+      })
+    ),
 
   incrementAttribute: (characterInd, attributeName) =>
     set(
@@ -126,7 +142,7 @@ export const useStore = create((set) => ({
 
         // update skill points to spend
         if (attributeName === "Intelligence") {
-          state.availableSkillPoints = calcAvailableSkillPoints(modifier);
+          character.availableSkillPoints = calcAvailableSkillPoints(modifier);
         }
 
         //update skill total of all skills that has the current attribute as its modifier
@@ -155,14 +171,14 @@ export const useStore = create((set) => ({
 
           // decreasing intelligence will result in a lower availableSkillPoints
           // availableSkillPoints can't be lower than the already used up points
-          if (availablePoints < state.usedSkillPoints) {
+          if (availablePoints < character.usedSkillPoints) {
             throw new Error(
               "You must undo some of the distributed skill points before you decreasing Intelligence."
             );
           }
 
           // its ok to update the availableSkillPoints otherwise
-          state.availableSkillPoints = availablePoints;
+          character.availableSkillPoints = availablePoints;
         }
 
         attributes[attributeName] = {
@@ -178,12 +194,13 @@ export const useStore = create((set) => ({
   incrementSkills: (characterInd, skillName, attributeModifier) =>
     set(
       produce((state) => {
+        const character = state.characters[characterInd];
+
         // do not allow distributing more points than allocated
-        if (state.usedSkillPoints + 1 > state.availableSkillPoints) {
+        if (character.usedSkillPoints + 1 > character.availableSkillPoints) {
           throw new Error("No more points available to spend");
         }
 
-        const character = state.characters[characterInd];
         const skills = character["skills"];
 
         const points = skills[skillName]["points"] + 1;
@@ -193,7 +210,7 @@ export const useStore = create((set) => ({
         skills[skillName] = { points, total };
 
         // update used skill points
-        state.usedSkillPoints++;
+        character.usedSkillPoints++;
       })
     ),
 
@@ -217,7 +234,7 @@ export const useStore = create((set) => ({
         skills[skillName] = { points, total };
 
         // update used skill points
-        state.usedSkillPoints--;
+        character.usedSkillPoints--;
       })
     ),
 }));
